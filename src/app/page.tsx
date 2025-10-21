@@ -1,16 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Download, Sparkles } from 'lucide-react';
+import { generateComparisonVideo } from '@/ai/flows/generate-video-flow';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ImageUploader } from '@/components/image-uploader';
 import { ImageComparator } from '@/components/image-comparator';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
   const [image1, setImage1] = useState<string | null>(null);
   const [image2, setImage2] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (image1 && image2) {
@@ -22,6 +28,31 @@ export default function Home() {
     setImage1(null);
     setImage2(null);
     setShowComparison(false);
+    setVideoUrl(null);
+    setIsGenerating(false);
+  };
+  
+  const handleGenerateVideo = async () => {
+    if (!image1 || !image2) return;
+    setIsGenerating(true);
+    setVideoUrl(null);
+    try {
+      const result = await generateComparisonVideo({
+        beforeImage: image1,
+        afterImage: image2,
+      });
+      setVideoUrl(result.videoUrl);
+    } catch (error) {
+      console.error('Error generating video:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Video Generation Failed',
+        description:
+          'Something went wrong while creating the video. Please try again.',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -66,10 +97,26 @@ export default function Home() {
                     <ImageComparator beforeImage={image1} afterImage={image2} />
                   </CardContent>
                 </Card>
-                <div className="text-center">
+                <div className="text-center flex flex-wrap justify-center gap-4">
                   <Button size="lg" onClick={handleReset} variant="outline">
                     Start Over
                   </Button>
+                  <Button
+                    size="lg"
+                    onClick={handleGenerateVideo}
+                    disabled={isGenerating}
+                  >
+                    <Sparkles className="mr-2" />
+                    {isGenerating ? 'Generating Video...' : 'Generate Video'}
+                  </Button>
+                  {videoUrl && (
+                    <Button size="lg" asChild>
+                      <a href={videoUrl} download="comparison.mp4">
+                        <Download className="mr-2" />
+                        Download Video
+                      </a>
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
