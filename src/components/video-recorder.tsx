@@ -39,6 +39,34 @@ export const VideoRecorder = forwardRef<
     });
   };
 
+  const drawImageMaintainAspectRatio = (
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement
+  ) => {
+    const canvasWidth = ctx.canvas.width;
+    const canvasHeight = ctx.canvas.height;
+    const imgRatio = img.width / img.height;
+    const canvasRatio = canvasWidth / canvasHeight;
+
+    let drawWidth = canvasWidth;
+    let drawHeight = canvasHeight;
+    let x = 0;
+    let y = 0;
+
+    if (imgRatio > canvasRatio) {
+      // Image is wider than canvas
+      drawHeight = canvasWidth / imgRatio;
+      y = (canvasHeight - drawHeight) / 2;
+    } else {
+      // Image is taller than or same aspect as canvas
+      drawWidth = canvasHeight * imgRatio;
+      x = (canvasWidth - drawWidth) / 2;
+    }
+    
+    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+  };
+
+
   useImperativeHandle(ref, () => ({
     record: async () => {
       const beforeImg = await loadImage(beforeImage);
@@ -82,19 +110,19 @@ export const VideoRecorder = forwardRef<
 
           let sliderPosition = 50;
           if (frame < holdDurationFrames) {
-            sliderPosition = 0; // Hold "after"
-          } else if (frame >= holdDurationFrames && frame < holdDurationFrames + wipeDurationFrames) {
-            // Wipe from left to right
-            const wipeFrame = frame - holdDurationFrames;
-            sliderPosition = (wipeFrame / wipeDurationFrames) * 100;
-          } else {
             sliderPosition = 100; // Hold "before"
+          } else if (frame >= holdDurationFrames && frame < holdDurationFrames + wipeDurationFrames) {
+            // Wipe from right to left
+            const wipeFrame = frame - holdDurationFrames;
+            sliderPosition = 100 - (wipeFrame / wipeDurationFrames) * 100;
+          } else {
+            sliderPosition = 0; // Hold "after"
           }
           
           ctx.clearRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           
           // Draw "before" image
-          ctx.drawImage(beforeImg, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+          drawImageMaintainAspectRatio(ctx, beforeImg);
 
           // Draw "after" image with clipping
           ctx.save();
@@ -102,7 +130,7 @@ export const VideoRecorder = forwardRef<
           ctx.beginPath();
           ctx.rect(0, 0, clipWidth, VIDEO_HEIGHT);
           ctx.clip();
-          ctx.drawImage(afterImg, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+          drawImageMaintainAspectRatio(ctx, afterImg);
           ctx.restore();
 
           frame++;
