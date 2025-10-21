@@ -36,7 +36,7 @@ export function ImageComparator({
         />
         <div
           className="absolute top-0 left-0 h-full w-full overflow-hidden"
-          style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+          style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
         >
           <Image
             src={afterImage}
