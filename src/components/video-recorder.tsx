@@ -19,8 +19,8 @@ export interface VideoRecorderHandle {
   stopRecording: () => Promise<Blob>;
 }
 
-const VIDEO_WIDTH = 1280;
-const VIDEO_HEIGHT = 720;
+const VIDEO_WIDTH = 1920;
+const VIDEO_HEIGHT = 1080;
 const FPS = 30;
 
 export const VideoRecorder = forwardRef<
@@ -104,13 +104,13 @@ export const VideoRecorder = forwardRef<
 
   useImperativeHandle(ref, () => ({
     startRecording: () => {
-      const preferredMimeType = 'video/mp4';
+      const preferredMimeType = 'video/mp4; codecs=avc1';
       const fallbackMimeType = 'video/webm';
       const supportedMimeType = MediaRecorder.isTypeSupported(preferredMimeType)
         ? preferredMimeType
         : fallbackMimeType;
       
-      const fileExtension = supportedMimeType === preferredMimeType ? 'mp4' : 'webm';
+      const fileExtension = supportedMimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
 
       (async () => {
         beforeImgRef.current = await loadImage(beforeImage);
