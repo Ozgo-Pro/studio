@@ -115,7 +115,7 @@ export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparator
           <div
             className="absolute top-0 left-0 h-full w-full overflow-hidden"
             style={{
-              clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)`,
+              clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)`,
             }}
           >
             <Image
@@ -127,22 +127,22 @@ export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparator
               unoptimized
             />
           </div>
-
+          
           <div
             className={cn(
               'absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none transition-opacity',
-              sliderPosition > 98 && 'opacity-0'
-            )}
-          >
-            AFTER
-          </div>
-          <div
-            className={cn(
-              'absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none transition-opacity',
               sliderPosition < 2 && 'opacity-0'
             )}
           >
             BEFORE
+          </div>
+          <div
+            className={cn(
+              'absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none transition-opacity',
+              sliderPosition > 98 && 'opacity-0'
+            )}
+          >
+            AFTER
           </div>
 
           <div
