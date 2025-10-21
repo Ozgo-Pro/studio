@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, MouseEvent, TouchEvent, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronsLeftRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ImageComparatorProps {
   beforeImage: string;
@@ -49,7 +50,7 @@ export function ImageComparator({
     }
   }, [isDragging, handleMove]);
 
-  const handleTouchMove = useCallback((e: globaltis.TouchEvent) => {
+  const handleTouchMove = useCallback((e: globalThis.TouchEvent) => {
     if (isDragging) {
       handleMove(e.touches[0].clientX);
     }
@@ -74,8 +75,6 @@ export function ImageComparator({
       <div
         ref={containerRef}
         className="relative w-full aspect-video overflow-hidden rounded-lg shadow-lg select-none"
-        onMouseMove={(e) => isDragging && handleMove(e.clientX)}
-        onTouchMove={(e) => isDragging && handleMove(e.touches[0].clientX)}
       >
         <Image
           src={beforeImage}
@@ -84,21 +83,10 @@ export function ImageComparator({
           className="object-contain"
           priority
         />
+        
         <div
           className="absolute top-0 left-0 h-full w-full overflow-hidden"
-          style={{ clipPath: `polygon(0 0, 0% 0, 0% 100%, 0 100%)` }}
-        >
-          <Image
-            src={afterImage}
-            alt="After"
-            fill
-            className="object-contain"
-            priority
-          />
-        </div>
-        <div
-          className="absolute top-0 left-0 h-full w-full overflow-hidden"
-          style={{ clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)` }}
+          style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
         >
           <Image
             src={afterImage}
@@ -109,10 +97,10 @@ export function ImageComparator({
           />
         </div>
 
-        <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none">
+        <div className={cn("absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none transition-opacity", sliderPosition < 2 && "opacity-0")}>
           BEFORE
         </div>
-        <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none">
+        <div className={cn("absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none transition-opacity", sliderPosition > 98 && "opacity-0")}>
           AFTER
         </div>
 
