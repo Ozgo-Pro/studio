@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, MouseEvent, TouchEvent } from 'react';
 import Image from 'next/image';
 import { ChevronsLeftRight } from 'lucide-react';
 
@@ -16,7 +16,46 @@ export function ImageComparator({
   afterImage,
 }: ImageComparatorProps) {
   const [sliderPosition, setSliderPosition] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMove = useCallback((clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percentage = (x / rect.width) * 100;
+    const newSliderPosition = Math.max(0, Math.min(100, percentage));
+    setSliderPosition(newSliderPosition);
+  }, []);
+
+  const handleMouseDown = (e: MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  
+  const handleTouchStart = (e: TouchEvent) => {
+    setIsDragging(true);
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+  
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  }
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging) {
+      handleMove(e.clientX);
+    }
+  }, [isDragging, handleMove]);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (isDragging) {
+      handleMove(e.touches[0].clientX);
+    }
+  }, [isDragging, handleMove]);
 
   const handleSliderChange = (value: number[]) => {
     setSliderPosition(value[0]);
@@ -26,13 +65,19 @@ export function ImageComparator({
     <div className="w-full max-w-4xl mx-auto space-y-4">
       <div
         ref={containerRef}
-        className="relative w-full aspect-video overflow-hidden rounded-lg shadow-lg"
+        className="relative w-full aspect-video overflow-hidden rounded-lg shadow-lg select-none"
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <Image
           src={beforeImage}
           alt="Before"
           fill
           className="object-contain"
+          priority
         />
         <div
           className="absolute top-0 left-0 h-full w-full overflow-hidden"
@@ -43,11 +88,14 @@ export function ImageComparator({
             alt="After"
             fill
             className="object-contain"
+            priority
           />
         </div>
         <div
           className="absolute top-0 h-full w-1 bg-white/50 cursor-ew-resize backdrop-invert"
           style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
         >
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 text-black shadow-md pointer-events-none">
             <ChevronsLeftRight className="w-6 h-6" />
