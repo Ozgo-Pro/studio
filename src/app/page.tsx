@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Download, Sparkles } from 'lucide-react';
 import { generateComparisonVideo } from '@/ai/flows/generate-video-flow';
+import type { GenerateVideoOutput } from '@/ai/flows/generate-video-schema';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,13 +32,13 @@ export default function Home() {
     setVideoUrl(null);
     setIsGenerating(false);
   };
-  
+
   const handleGenerateVideo = async () => {
     if (!image1 || !image2) return;
     setIsGenerating(true);
     setVideoUrl(null);
     try {
-      const result = await generateComparisonVideo({
+      const result: GenerateVideoOutput = await generateComparisonVideo({
         beforeImage: image1,
         afterImage: image2,
       });
