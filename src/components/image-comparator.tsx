@@ -4,8 +4,6 @@ import { useState, useRef, useCallback, MouseEvent, TouchEvent, useEffect } from
 import Image from 'next/image';
 import { ChevronsLeftRight } from 'lucide-react';
 
-import { Slider } from '@/components/ui/slider';
-
 interface ImageComparatorProps {
   beforeImage: string;
   afterImage: string;
@@ -20,13 +18,13 @@ export function ImageComparator({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMove = useCallback((clientX: number) => {
-    if (!isDragging || !containerRef.current) return;
+    if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     let percentage = (x / rect.width) * 100;
     percentage = Math.max(0, Math.min(100, percentage));
     setSliderPosition(percentage);
-  }, [isDragging]);
+  }, []);
 
   const handleMouseDown = (e: MouseEvent) => {
     e.preventDefault();
@@ -51,7 +49,7 @@ export function ImageComparator({
     }
   }, [isDragging, handleMove]);
 
-  const handleTouchMove = useCallback((e: globalThis.TouchEvent) => {
+  const handleTouchMove = useCallback((e: globaltis.TouchEvent) => {
     if (isDragging) {
       handleMove(e.touches[0].clientX);
     }
@@ -71,35 +69,53 @@ export function ImageComparator({
     };
   }, [handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
-  const handleSliderChange = (value: number[]) => {
-    setSliderPosition(value[0]);
-  };
-
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
       <div
         ref={containerRef}
         className="relative w-full aspect-video overflow-hidden rounded-lg shadow-lg select-none"
+        onMouseMove={(e) => isDragging && handleMove(e.clientX)}
+        onTouchMove={(e) => isDragging && handleMove(e.touches[0].clientX)}
       >
         <Image
-          src={afterImage}
-          alt="After"
+          src={beforeImage}
+          alt="Before"
           fill
           className="object-contain"
           priority
         />
         <div
           className="absolute top-0 left-0 h-full w-full overflow-hidden"
-          style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
+          style={{ clipPath: `polygon(0 0, 0% 0, 0% 100%, 0 100%)` }}
         >
           <Image
-            src={beforeImage}
-            alt="Before"
+            src={afterImage}
+            alt="After"
             fill
             className="object-contain"
             priority
           />
         </div>
+        <div
+          className="absolute top-0 left-0 h-full w-full overflow-hidden"
+          style={{ clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)` }}
+        >
+          <Image
+            src={afterImage}
+            alt="After"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+
+        <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none">
+          BEFORE
+        </div>
+        <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none">
+          AFTER
+        </div>
+
         <div
           className="absolute top-0 h-full w-1 bg-white/50 cursor-ew-resize backdrop-invert"
           style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
@@ -110,20 +126,6 @@ export function ImageComparator({
             <ChevronsLeftRight className="w-6 h-6" />
           </div>
         </div>
-      </div>
-      <div className="px-1">
-         <Slider
-          id="comparator-slider"
-          min={0}
-          max={100}
-          step={0.1}
-          value={[sliderPosition]}
-          onValueChange={handleSliderChange}
-        />
-      </div>
-      <div className="flex justify-between text-sm text-muted-foreground px-1">
-        <span>Before</span>
-        <span>After</span>
       </div>
     </div>
   );
