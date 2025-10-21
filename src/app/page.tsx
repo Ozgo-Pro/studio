@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Download, Sparkles } from 'lucide-react';
-import { generateComparisonVideo } from '@/ai/flows/generate-video-flow';
-import type { GenerateVideoOutput } from '@/ai/flows/generate-video-schema';
+import { useState, useEffect, useRef } from 'react';
+import { Download, Sparkles, Video } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ImageUploader } from '@/components/image-uploader';
 import { ImageComparator } from '@/components/image-comparator';
+import { VideoRecorder, type VideoRecorderHandle } from '@/components/video-recorder';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
@@ -16,7 +15,8 @@ export default function Home() {
   const [image2, setImage2] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const recorderRef = useRef<VideoRecorderHandle>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,25 +29,22 @@ export default function Home() {
     setImage1(null);
     setImage2(null);
     setShowComparison(false);
-    setVideoUrl(null);
+    setVideoBlob(null);
     setIsGenerating(false);
   };
 
-  const handleGenerateVideo = async () => {
-    if (!image1 || !image2) return;
+  const handleRecordVideo = async () => {
+    if (!recorderRef.current) return;
     setIsGenerating(true);
-    setVideoUrl(null);
+    setVideoBlob(null);
     try {
-      const result: GenerateVideoOutput = await generateComparisonVideo({
-        beforeImage: image1,
-        afterImage: image2,
-      });
-      setVideoUrl(result.videoUrl);
+      const blob = await recorderRef.current.record();
+      setVideoBlob(blob);
     } catch (error) {
-      console.error('Error generating video:', error);
+      console.error('Error recording video:', error);
       toast({
         variant: 'destructive',
-        title: 'Video Generation Failed',
+        title: 'Video Recording Failed',
         description:
           'Something went wrong while creating the video. Please try again.',
       });
@@ -55,6 +52,8 @@ export default function Home() {
       setIsGenerating(false);
     }
   };
+
+  const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-foreground">
@@ -95,7 +94,9 @@ export default function Home() {
               <div className="space-y-8 animate-in fade-in duration-500">
                 <Card>
                   <CardContent className="p-4 md:p-6">
-                    <ImageComparator beforeImage={image1} afterImage={image2} />
+                    <VideoRecorder ref={recorderRef} beforeImage={image1} afterImage={image2}>
+                      <ImageComparator beforeImage={image1} afterImage={image2} />
+                    </VideoRecorder>
                   </CardContent>
                 </Card>
                 <div className="text-center flex flex-wrap justify-center gap-4">
@@ -104,15 +105,15 @@ export default function Home() {
                   </Button>
                   <Button
                     size="lg"
-                    onClick={handleGenerateVideo}
+                    onClick={handleRecordVideo}
                     disabled={isGenerating}
                   >
-                    <Sparkles className="mr-2" />
-                    {isGenerating ? 'Generating Video...' : 'Generate Video'}
+                    <Video className="mr-2" />
+                    {isGenerating ? 'Recording Video...' : 'Record Video'}
                   </Button>
                   {videoUrl && (
                     <Button size="lg" asChild>
-                      <a href={videoUrl} download="comparison.mp4">
+                      <a href={videoUrl} download="comparison.webm">
                         <Download className="mr-2" />
                         Download Video
                       </a>
