@@ -1,82 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
-import {
-  AlertCircle,
-  ImageIcon,
-  Loader2,
-  Sparkles,
-  ZoomIn,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
 import { ImageUploader } from '@/components/image-uploader';
-import { ZoomableImage } from '@/components/zoomable-image';
-import { compareImages } from './actions';
-
-type ComparisonResult = {
-  comparisonImage: string;
-  summary: string;
-};
+import { ImageComparator } from '@/components/image-comparator';
 
 export default function Home() {
   const [image1, setImage1] = useState<string | null>(null);
   const [image2, setImage2] = useState<string | null>(null);
-  const [result, setResult] = useState<ComparisonResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [showComparison, setShowComparison] = useState(false);
 
-  const handleCompare = async () => {
-    if (!image1 || !image2) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Images',
-        description: 'Please upload both images before comparing.',
-      });
-      return;
+  useEffect(() => {
+    if (image1 && image2) {
+      setShowComparison(true);
     }
-
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const res = await compareImages(image1, image2);
-      setResult(res);
-    } catch (e) {
-      const errMessage =
-        e instanceof Error ? e.message : 'An unknown error occurred.';
-      setError(errMessage);
-      toast({
-        variant: 'destructive',
-        title: 'Comparison Failed',
-        description: errMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [image1, image2]);
 
   const handleReset = () => {
     setImage1(null);
     setImage2(null);
-    setResult(null);
-    setError(null);
+    setShowComparison(false);
   };
-
-  const canCompare = image1 && image2 && !isLoading;
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-foreground">
@@ -85,180 +31,62 @@ export default function Home() {
           Spot the Difference
         </h1>
         <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-          Upload two images and let our AI instantly highlight what's changed.
+          Upload two images and use the slider to compare them side-by-side.
         </p>
       </header>
 
       <main className="flex-1 w-full container mx-auto px-4">
-        <Card className="max-w-4xl mx-auto">
-          <CardContent className="p-6 md:p-8">
-            <div className="grid md:grid-cols-2 gap-6">
-              <ImageUploader
-                image={image1}
-                onImageUpload={setImage1}
-                onReset={() => setImage1(null)}
-                title="Original Image"
-                id="image1"
-              />
-              <ImageUploader
-                image={image2}
-                onImageUpload={setImage2}
-                onReset={() => setImage2(null)}
-                title="Modified Image"
-                id="image2"
-              />
-            </div>
-            <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
-              <Button
-                size="lg"
-                onClick={handleCompare}
-                disabled={!canCompare}
-                className="w-full sm:w-auto"
-              >
-                {isLoading ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <Sparkles />
-                )}
-                <span className="ml-2">
-                  {isLoading ? 'Analyzing...' : 'Find Differences'}
-                </span>
-              </Button>
-              {(result || image1 || image2) && (
-                <Button
-                  size="lg"
-                  onClick={handleReset}
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                >
-                  Start Over
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <section className="mt-12 max-w-6xl mx-auto">
-          {isLoading && <LoadingSkeleton />}
-          {error && !isLoading && <ErrorDisplay message={error} />}
-          {result && !isLoading && (
-            <div className="space-y-8 animate-in fade-in duration-500">
-              <div className="grid md:grid-cols-3 gap-6">
-                <ResultCard title="Original" image={image1} />
-                <Card className="col-span-1 border-primary border-2 shadow-2xl">
-                  <CardHeader>
-                    <CardTitle className="text-primary">Differences</CardTitle>
-                    <CardDescription>
-                      Click image to zoom and inspect.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {result.comparisonImage ? (
-                      <ZoomableImage
-                        src={result.comparisonImage}
-                        alt="Comparison of the two images with differences highlighted"
-                      />
-                    ) : (
-                      <div className="aspect-square w-full flex flex-col items-center justify-center bg-muted rounded-md">
-                        <ImageIcon className="w-12 h-12 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          No visual diff available.
-                        </p>
-                      </div>
-                    )}
+        {!showComparison ? (
+          <Card className="max-w-4xl mx-auto">
+            <CardContent className="p-6 md:p-8">
+              <div className="grid md:grid-cols-2 gap-6">
+                <ImageUploader
+                  image={image1}
+                  onImageUpload={setImage1}
+                  onReset={() => setImage1(null)}
+                  title="Before Image"
+                  id="image1"
+                />
+                <ImageUploader
+                  image={image2}
+                  onImageUpload={setImage2}
+                  onReset={() => setImage2(null)}
+                  title="After Image"
+                  id="image2"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <section className="mt-8 max-w-4xl mx-auto">
+            {image1 && image2 ? (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                <Card>
+                  <CardContent className="p-4 md:p-6">
+                    <ImageComparator beforeImage={image1} afterImage={image2} />
                   </CardContent>
                 </Card>
-                <ResultCard title="Modified" image={image2} />
+                <div className="text-center">
+                  <Button size="lg" onClick={handleReset} variant="outline">
+                    Start Over
+                  </Button>
+                </div>
               </div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{result.summary}</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </section>
+            ) : (
+              <div className="text-center">
+                <p>Something went wrong. Please start over.</p>
+                <Button onClick={handleReset} variant="outline" className="mt-4">
+                  Start Over
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
       </main>
 
       <footer className="w-full py-6 text-center text-muted-foreground text-sm">
-        <p>Powered by Firebase and Genkit AI</p>
+        <p>Powered by Firebase and Next.js</p>
       </footer>
     </div>
   );
 }
-
-const LoadingSkeleton = () => (
-  <div className="space-y-8">
-    <div className="grid md:grid-cols-3 gap-6">
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-24" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="w-full aspect-square" />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-24" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="w-full aspect-square" />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-24" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="w-full aspect-square" />
-        </CardContent>
-      </Card>
-    </div>
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-32" />
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-      </CardContent>
-    </Card>
-  </div>
-);
-
-const ErrorDisplay = ({ message }: { message: string }) => (
-  <Alert variant="destructive" className="max-w-4xl mx-auto">
-    <AlertCircle className="h-4 w-4" />
-    <AlertTitle>An Error Occurred</AlertTitle>
-    <AlertDescription>{message}</AlertDescription>
-  </Alert>
-);
-
-const ResultCard = ({ title, image }: { title: string; image: string | null }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>{title}</CardTitle>
-    </CardHeader>
-    <CardContent>
-      {image ? (
-        <div className="relative aspect-square w-full overflow-hidden rounded-md">
-          <Image
-            src={image}
-            alt={`Uploaded image: ${title}`}
-            fill
-            className="object-contain"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 33vw"
-          />
-        </div>
-      ) : (
-        <div className="aspect-square w-full flex items-center justify-center bg-muted rounded-md">
-          <ImageIcon className="w-12 h-12 text-muted-foreground" />
-        </div>
-      )}
-    </CardContent>
-  </Card>
-);
