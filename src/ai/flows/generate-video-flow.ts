@@ -27,14 +27,21 @@ const generateComparisonVideoFlow = ai.defineFlow(
     outputSchema: GenerateVideoOutputSchema,
   },
   async ({ beforeImage, afterImage }) => {
+    const beforeImageContentType = beforeImage.match(/data:(.*);base64,/)?.[1];
+    const afterImageContentType = afterImage.match(/data:(.*);base64,/)?.[1];
+
+    if (!beforeImageContentType || !afterImageContentType) {
+      throw new Error('Could not determine image content type from data URI.');
+    }
+    
     let { operation } = await ai.generate({
       model: googleAI.model('veo-2.0-generate-001'),
       prompt: [
         {
           text: 'Create a 5-second video. Start by showing the "after" image for 1 second. Then, perform a 3-second vertical line wipe transition from left to right, revealing the "before" image. Hold on the final "before" image for the remaining 1 second. The video should have a 16:9 aspect ratio.',
         },
-        { media: { url: afterImage } },
-        { media: { url: beforeImage } },
+        { media: { url: afterImage, contentType: afterImageContentType } },
+        { media: { url: beforeImage, contentType: beforeImageContentType } },
       ],
       config: {
         durationSeconds: 5,
