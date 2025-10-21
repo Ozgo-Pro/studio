@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Download, Sparkles, Video } from 'lucide-react';
+import { Download, Video, Square, CircleDot } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,12 +9,13 @@ import { ImageUploader } from '@/components/image-uploader';
 import { ImageComparator } from '@/components/image-comparator';
 import { VideoRecorder, type VideoRecorderHandle } from '@/components/video-recorder';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function Home() {
   const [image1, setImage1] = useState<string | null>(null);
   const [image2, setImage2] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const recorderRef = useRef<VideoRecorderHandle>(null);
   const { toast } = useToast();
@@ -30,28 +31,42 @@ export default function Home() {
     setImage2(null);
     setShowComparison(false);
     setVideoBlob(null);
-    setIsGenerating(false);
+    setIsRecording(false);
   };
 
-  const handleRecordVideo = async () => {
+  const handleStartRecording = () => {
     if (!recorderRef.current) return;
-    setIsGenerating(true);
     setVideoBlob(null);
+    setIsRecording(true);
+    recorderRef.current.startRecording();
+    toast({
+      title: 'Recording Started',
+      description: 'Move the slider to create your video.',
+    });
+  };
+
+  const handleStopRecording = async () => {
+    if (!recorderRef.current) return;
     try {
-      const blob = await recorderRef.current.record();
+      const blob = await recorderRef.current.stopRecording();
       setVideoBlob(blob);
+      toast({
+        title: 'Recording Finished',
+        description: 'Your video is ready for download.',
+      });
     } catch (error) {
-      console.error('Error recording video:', error);
+       console.error('Error stopping recording:', error);
       toast({
         variant: 'destructive',
-        title: 'Video Recording Failed',
+        title: 'Recording Failed',
         description:
-          'Something went wrong while creating the video. Please try again.',
+          'Something went wrong. Please try recording again.',
       });
     } finally {
-      setIsGenerating(false);
+      setIsRecording(false);
     }
   };
+
 
   const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
 
@@ -93,24 +108,39 @@ export default function Home() {
             {image1 && image2 ? (
               <div className="space-y-8 animate-in fade-in duration-500">
                 <Card>
-                  <CardContent className="p-4 md:p-6">
+                  <CardContent className={cn("p-4 md:p-6 transition-all duration-300", isRecording && "ring-2 ring-red-500 ring-offset-4 ring-offset-background rounded-lg")}>
                     <VideoRecorder ref={recorderRef} beforeImage={image1} afterImage={image2}>
                       <ImageComparator beforeImage={image1} afterImage={image2} />
                     </VideoRecorder>
                   </CardContent>
                 </Card>
                 <div className="text-center flex flex-wrap justify-center gap-4">
-                  <Button size="lg" onClick={handleReset} variant="outline">
+                  <Button size="lg" onClick={handleReset} variant="outline" disabled={isRecording}>
                     Start Over
                   </Button>
-                  <Button
-                    size="lg"
-                    onClick={handleRecordVideo}
-                    disabled={isGenerating}
-                  >
-                    <Video className="mr-2" />
-                    {isGenerating ? 'Recording Video...' : 'Record Video'}
-                  </Button>
+                  {!isRecording ? (
+                    <Button
+                      size="lg"
+                      onClick={handleStartRecording}
+                      disabled={isRecording}
+                    >
+                      <Video className="mr-2" />
+                      Start Recording
+                    </Button>
+                  ) : (
+                     <Button
+                      size="lg"
+                      variant="destructive"
+                      onClick={handleStopRecording}
+                    >
+                      <Square className="mr-2" />
+                       Stop Recording
+                       <span className="relative flex h-3 w-3 ml-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-current"></span>
+                      </span>
+                    </Button>
+                  )}
                   {videoUrl && (
                     <Button size="lg" asChild>
                       <a href={videoUrl} download="comparison.webm">

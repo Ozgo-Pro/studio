@@ -9,25 +9,32 @@ import {
 import { ImageComparator, type ImageComparatorHandle } from './image-comparator';
 
 interface VideoRecorderProps {
+  children: ReactNode;
   beforeImage: string;
   afterImage: string;
-  children: ReactNode;
 }
 
 export interface VideoRecorderHandle {
-  record: () => Promise<Blob>;
+  startRecording: () => void;
+  stopRecording: () => Promise<Blob>;
 }
 
 const VIDEO_WIDTH = 1280;
 const VIDEO_HEIGHT = 720;
-const DURATION_S = 5;
 const FPS = 30;
 
 export const VideoRecorder = forwardRef<
   VideoRecorderHandle,
   VideoRecorderProps
->(({ beforeImage, afterImage, children }, ref) => {
+>(({ children, beforeImage, afterImage }, ref) => {
   const imageComparatorRef = useRef<ImageComparatorHandle>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameId = useRef<number | null>(null);
+  const recordedChunks = useRef<Blob[]>([]);
+
+  const beforeImgRef = useRef<HTMLImageElement | null>(null);
+  const afterImgRef = useRef<HTMLImageElement | null>(null);
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -54,99 +61,104 @@ export const VideoRecorder = forwardRef<
     let y = 0;
 
     if (imgRatio > canvasRatio) {
-      // Image is wider than canvas
       drawHeight = canvasWidth / imgRatio;
       y = (canvasHeight - drawHeight) / 2;
     } else {
-      // Image is taller than or same aspect as canvas
       drawWidth = canvasHeight * imgRatio;
       x = (canvasWidth - drawWidth) / 2;
     }
-    
+
     ctx.drawImage(img, x, y, drawWidth, drawHeight);
   };
+  
+  const drawFrame = () => {
+    if (
+      !canvasRef.current ||
+      !imageComparatorRef.current ||
+      !beforeImgRef.current ||
+      !afterImgRef.current
+    ) {
+      return;
+    }
 
+    const ctx = canvasRef.current.getContext('2d');
+    const { sliderPosition } = imageComparatorRef.current.getState();
+    const beforeImg = beforeImgRef.current;
+    const afterImg = afterImgRef.current;
+
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+    drawImageMaintainAspectRatio(ctx, afterImg);
+
+    ctx.save();
+    const clipX = (sliderPosition / 100) * VIDEO_WIDTH;
+    ctx.beginPath();
+    ctx.rect(clipX, 0, VIDEO_WIDTH - clipX, VIDEO_HEIGHT);
+    ctx.clip();
+    drawImageMaintainAspectRatio(ctx, beforeImg);
+    ctx.restore();
+
+    animationFrameId.current = requestAnimationFrame(drawFrame);
+  };
 
   useImperativeHandle(ref, () => ({
-    record: async () => {
-      const beforeImg = await loadImage(beforeImage);
-      const afterImg = await loadImage(afterImage);
+    startRecording: async () => {
+      beforeImgRef.current = await loadImage(beforeImage);
+      afterImgRef.current = await loadImage(afterImage);
 
       const canvas = document.createElement('canvas');
       canvas.width = VIDEO_WIDTH;
       canvas.height = VIDEO_HEIGHT;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Could not get canvas context');
+      canvasRef.current = canvas;
 
       const stream = canvas.captureStream(FPS);
       const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      const chunks: Blob[] = [];
+      mediaRecorderRef.current = recorder;
+      recordedChunks.current = [];
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunks.current.push(event.data);
         }
       };
 
+      recorder.start();
+      animationFrameId.current = requestAnimationFrame(drawFrame);
+    },
+    stopRecording: () => {
       return new Promise((resolve, reject) => {
-        recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
+        if (!mediaRecorderRef.current) {
+          return reject(new Error('Recorder not initialized.'));
+        }
+
+        mediaRecorderRef.current.onstop = () => {
+          const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
           resolve(blob);
-        };
-        recorder.onerror = reject;
-
-        recorder.start();
-
-        let frame = 0;
-        const totalFrames = DURATION_S * FPS;
-        const wipeDurationFrames = totalFrames * 0.6; // 60% of time for wiping
-        const holdDurationFrames = totalFrames * 0.2; // 20% hold at start/end
-
-        const drawFrame = () => {
-          if (frame >= totalFrames) {
-            recorder.stop();
-            return;
-          }
-
-          let sliderPosition = 50;
-          if (frame < holdDurationFrames) {
-            sliderPosition = 100; // Hold "before"
-          } else if (frame >= holdDurationFrames && frame < holdDurationFrames + wipeDurationFrames) {
-            // Wipe from right to left
-            const wipeFrame = frame - holdDurationFrames;
-            sliderPosition = 100 - (wipeFrame / wipeDurationFrames) * 100;
-          } else {
-            sliderPosition = 0; // Hold "after"
-          }
-          
-          ctx.clearRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
-          
-          // Draw "before" image
-          drawImageMaintainAspectRatio(ctx, beforeImg);
-
-          // Draw "after" image with clipping
-          ctx.save();
-          const clipWidth = (sliderPosition / 100) * VIDEO_WIDTH;
-          ctx.beginPath();
-          ctx.rect(0, 0, clipWidth, VIDEO_HEIGHT);
-          ctx.clip();
-          drawImageMaintainAspectRatio(ctx, afterImg);
-          ctx.restore();
-
-          frame++;
-          requestAnimationFrame(drawFrame);
+          recordedChunks.current = [];
         };
 
-        drawFrame();
+        mediaRecorderRef.current.onerror = (event) => {
+          reject((event as any).error || new Error('MediaRecorder error'));
+        };
+        
+        mediaRecorderRef.current.stop();
+
+        if (animationFrameId.current) {
+          cancelAnimationFrame(animationFrameId.current);
+          animationFrameId.current = null;
+        }
       });
     },
   }));
-
-  // We only need the children for the live view, the recorder uses its own canvas
-  return <div style={{ position: 'relative' }}>
-    {/* This is the visible component */}
-    <ImageComparator ref={imageComparatorRef} beforeImage={beforeImage} afterImage={afterImage} />
-  </div>;
+  
+  return (
+    <ImageComparator
+      ref={imageComparatorRef}
+      beforeImage={beforeImage}
+      afterImage={afterImage}
+    />
+  );
 });
 
 VideoRecorder.displayName = 'VideoRecorder';

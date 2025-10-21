@@ -22,6 +22,7 @@ export interface ImageComparatorProps {
 export interface ImageComparatorHandle {
   setSliderPosition: (position: number) => void;
   getContainer: () => HTMLDivElement | null;
+  getState: () => { sliderPosition: number };
 }
 
 export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparatorProps>(
@@ -33,6 +34,7 @@ export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparator
     useImperativeHandle(ref, () => ({
       setSliderPosition,
       getContainer: () => containerRef.current,
+      getState: () => ({ sliderPosition }),
     }));
 
     const handleMove = useCallback((clientX: number) => {
@@ -102,8 +104,8 @@ export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparator
           onTouchStart={handleTouchStart}
         >
           <Image
-            src={beforeImage}
-            alt="Before"
+            src={afterImage}
+            alt="After"
             fill
             className="object-contain"
             priority
@@ -113,12 +115,12 @@ export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparator
           <div
             className="absolute top-0 left-0 h-full w-full overflow-hidden"
             style={{
-              clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)`,
+              clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)`,
             }}
           >
             <Image
-              src={afterImage}
-              alt="After"
+              src={beforeImage}
+              alt="Before"
               fill
               className="object-contain"
               priority
@@ -129,7 +131,7 @@ export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparator
           <div
             className={cn(
               'absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none transition-opacity',
-              sliderPosition < 2 && 'opacity-0'
+              sliderPosition > 98 && 'opacity-0'
             )}
           >
             AFTER
@@ -137,7 +139,7 @@ export const ImageComparator = forwardRef<ImageComparatorHandle, ImageComparator
           <div
             className={cn(
               'absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm font-semibold pointer-events-none transition-opacity',
-              sliderPosition > 98 && 'opacity-0'
+              sliderPosition < 2 && 'opacity-0'
             )}
           >
             BEFORE
