@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, MouseEvent, TouchEvent } from 'react';
+import { useState, useRef, useCallback, MouseEvent, TouchEvent, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronsLeftRight } from 'lucide-react';
 
@@ -20,13 +20,13 @@ export function ImageComparator({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMove = useCallback((clientX: number) => {
-    if (!containerRef.current) return;
+    if (!isDragging || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
-    const percentage = (x / rect.width) * 100;
-    const newSliderPosition = Math.max(0, Math.min(100, percentage));
-    setSliderPosition(newSliderPosition);
-  }, []);
+    let percentage = (x / rect.width) * 100;
+    percentage = Math.max(0, Math.min(100, percentage));
+    setSliderPosition(percentage);
+  }, [isDragging]);
 
   const handleMouseDown = (e: MouseEvent) => {
     e.preventDefault();
@@ -37,25 +37,39 @@ export function ImageComparator({
     setIsDragging(true);
   }
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
   
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     setIsDragging(false);
-  }
+  }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (isDragging) {
       handleMove(e.clientX);
     }
   }, [isDragging, handleMove]);
 
-  const handleTouchMove = useCallback((e: TouchEvent) => {
+  const handleTouchMove = useCallback((e: globalThis.TouchEvent) => {
     if (isDragging) {
       handleMove(e.touches[0].clientX);
     }
   }, [isDragging, handleMove]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   const handleSliderChange = (value: number[]) => {
     setSliderPosition(value[0]);
@@ -66,15 +80,10 @@ export function ImageComparator({
       <div
         ref={containerRef}
         className="relative w-full aspect-video overflow-hidden rounded-lg shadow-lg select-none"
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         <Image
-          src={beforeImage}
-          alt="Before"
+          src={afterImage}
+          alt="After"
           fill
           className="object-contain"
           priority
@@ -84,8 +93,8 @@ export function ImageComparator({
           style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
         >
           <Image
-            src={afterImage}
-            alt="After"
+            src={beforeImage}
+            alt="Before"
             fill
             className="object-contain"
             priority
