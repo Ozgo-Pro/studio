@@ -77,8 +77,8 @@ export function ImageComparator({
         className="relative w-full aspect-video overflow-hidden rounded-lg shadow-lg select-none"
       >
         <Image
-          src={beforeImage}
-          alt="Before"
+          src={afterImage}
+          alt="After"
           fill
           className="object-contain"
           priority
@@ -89,8 +89,8 @@ export function ImageComparator({
           style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
         >
           <Image
-            src={afterImage}
-            alt="After"
+            src={beforeImage}
+            alt="Before"
             fill
             className="object-contain"
             priority
