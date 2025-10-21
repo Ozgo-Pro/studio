@@ -17,6 +17,7 @@ export default function Home() {
   const [showComparison, setShowComparison] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [videoFileExtension, setVideoFileExtension] = useState('webm');
   const recorderRef = useRef<VideoRecorderHandle>(null);
   const { toast } = useToast();
 
@@ -38,7 +39,8 @@ export default function Home() {
     if (!recorderRef.current) return;
     setVideoBlob(null);
     setIsRecording(true);
-    recorderRef.current.startRecording();
+    const extension = recorderRef.current.startRecording();
+    setVideoFileExtension(extension);
     toast({
       title: 'Recording Started',
       description: 'Move the slider to create your video.',
@@ -143,7 +145,7 @@ export default function Home() {
                   )}
                   {videoUrl && (
                     <Button size="lg" asChild>
-                      <a href={videoUrl} download="comparison.webm">
+                      <a href={videoUrl} download={`comparison.${videoFileExtension}`}>
                         <Download className="mr-2" />
                         Download Video
                       </a>

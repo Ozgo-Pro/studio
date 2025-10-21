@@ -15,7 +15,7 @@ interface VideoRecorderProps {
 }
 
 export interface VideoRecorderHandle {
-  startRecording: () => void;
+  startRecording: () => 'mp4' | 'webm';
   stopRecording: () => Promise<Blob>;
 }
 
@@ -103,28 +103,39 @@ export const VideoRecorder = forwardRef<
   };
 
   useImperativeHandle(ref, () => ({
-    startRecording: async () => {
-      beforeImgRef.current = await loadImage(beforeImage);
-      afterImgRef.current = await loadImage(afterImage);
+    startRecording: () => {
+      const preferredMimeType = 'video/mp4';
+      const fallbackMimeType = 'video/webm';
+      const supportedMimeType = MediaRecorder.isTypeSupported(preferredMimeType)
+        ? preferredMimeType
+        : fallbackMimeType;
+      
+      const fileExtension = supportedMimeType === preferredMimeType ? 'mp4' : 'webm';
 
-      const canvas = document.createElement('canvas');
-      canvas.width = VIDEO_WIDTH;
-      canvas.height = VIDEO_HEIGHT;
-      canvasRef.current = canvas;
-
-      const stream = canvas.captureStream(FPS);
-      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      mediaRecorderRef.current = recorder;
-      recordedChunks.current = [];
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunks.current.push(event.data);
-        }
-      };
-
-      recorder.start();
-      animationFrameId.current = requestAnimationFrame(drawFrame);
+      (async () => {
+        beforeImgRef.current = await loadImage(beforeImage);
+        afterImgRef.current = await loadImage(afterImage);
+  
+        const canvas = document.createElement('canvas');
+        canvas.width = VIDEO_WIDTH;
+        canvas.height = VIDEO_HEIGHT;
+        canvasRef.current = canvas;
+  
+        const stream = canvas.captureStream(FPS);
+        const recorder = new MediaRecorder(stream, { mimeType: supportedMimeType });
+        mediaRecorderRef.current = recorder;
+        recordedChunks.current = [];
+  
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.current.push(event.data);
+          }
+        };
+  
+        recorder.start();
+        animationFrameId.current = requestAnimationFrame(drawFrame);
+      })();
+      return fileExtension;
     },
     stopRecording: () => {
       return new Promise((resolve, reject) => {
@@ -133,7 +144,8 @@ export const VideoRecorder = forwardRef<
         }
 
         mediaRecorderRef.current.onstop = () => {
-          const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
+          const mimeType = mediaRecorderRef.current?.mimeType || 'video/webm';
+          const blob = new Blob(recordedChunks.current, { type: mimeType });
           resolve(blob);
           recordedChunks.current = [];
         };
