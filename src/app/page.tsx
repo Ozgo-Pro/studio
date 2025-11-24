@@ -75,7 +75,7 @@ export default function Home() {
   const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-background text-foreground relative">
+    <div className="flex flex-col min-h-dvh text-foreground relative">
       <Image
         src="https://picsum.photos/seed/10/1920/1080"
         alt="Abstract background"
