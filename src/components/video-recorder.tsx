@@ -7,11 +7,14 @@ import {
   type ReactNode,
 } from 'react';
 import { ImageComparator, type ImageComparatorHandle } from './image-comparator';
+import { Card, CardContent } from './ui/card';
+import { cn } from '@/lib/utils';
 
 interface VideoRecorderProps {
   children: ReactNode;
   beforeImage: string;
   afterImage: string;
+  isRecording: boolean;
 }
 
 export interface VideoRecorderHandle {
@@ -26,7 +29,7 @@ const FPS = 30;
 export const VideoRecorder = forwardRef<
   VideoRecorderHandle,
   VideoRecorderProps
->(({ children, beforeImage, afterImage }, ref) => {
+>(({ children, beforeImage, afterImage, isRecording }, ref) => {
   const imageComparatorRef = useRef<ImageComparatorHandle>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -70,7 +73,7 @@ export const VideoRecorder = forwardRef<
 
     ctx.drawImage(img, x, y, drawWidth, drawHeight);
   };
-  
+
   const drawFrame = () => {
     if (
       !canvasRef.current ||
@@ -78,27 +81,35 @@ export const VideoRecorder = forwardRef<
       !beforeImgRef.current ||
       !afterImgRef.current
     ) {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+      animationFrameId.current = requestAnimationFrame(drawFrame);
       return;
     }
-
-    const ctx = canvasRef.current.getContext('2d');
+  
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+  
     const { sliderPosition } = imageComparatorRef.current.getState();
     const beforeImg = beforeImgRef.current;
     const afterImg = afterImgRef.current;
-
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+  
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+    // Draw after image (visible by default)
     drawImageMaintainAspectRatio(ctx, afterImg);
-
+  
+    // Draw before image clipped
     ctx.save();
-    const clipX = (sliderPosition / 100) * VIDEO_WIDTH;
+    const clipWidth = (sliderPosition / 100) * canvas.width;
     ctx.beginPath();
-    ctx.rect(clipX, 0, VIDEO_WIDTH - clipX, VIDEO_HEIGHT);
+    ctx.rect(0, 0, clipWidth, canvas.height);
     ctx.clip();
     drawImageMaintainAspectRatio(ctx, beforeImg);
     ctx.restore();
-
+  
     animationFrameId.current = requestAnimationFrame(drawFrame);
   };
 
@@ -109,29 +120,33 @@ export const VideoRecorder = forwardRef<
       const supportedMimeType = MediaRecorder.isTypeSupported(preferredMimeType)
         ? preferredMimeType
         : fallbackMimeType;
-      
-      const fileExtension = supportedMimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
+
+      const fileExtension = supportedMimeType.startsWith('video/mp4')
+        ? 'mp4'
+        : 'webm';
 
       (async () => {
         beforeImgRef.current = await loadImage(beforeImage);
         afterImgRef.current = await loadImage(afterImage);
-  
+
         const canvas = document.createElement('canvas');
         canvas.width = VIDEO_WIDTH;
         canvas.height = VIDEO_HEIGHT;
         canvasRef.current = canvas;
-  
+
         const stream = canvas.captureStream(FPS);
-        const recorder = new MediaRecorder(stream, { mimeType: supportedMimeType });
+        const recorder = new MediaRecorder(stream, {
+          mimeType: supportedMimeType,
+        });
         mediaRecorderRef.current = recorder;
         recordedChunks.current = [];
-  
+
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
             recordedChunks.current.push(event.data);
           }
         };
-  
+
         recorder.start();
         animationFrameId.current = requestAnimationFrame(drawFrame);
       })();
@@ -148,28 +163,37 @@ export const VideoRecorder = forwardRef<
           const blob = new Blob(recordedChunks.current, { type: mimeType });
           resolve(blob);
           recordedChunks.current = [];
+          if (animationFrameId.current) {
+            cancelAnimationFrame(animationFrameId.current);
+            animationFrameId.current = null;
+          }
         };
 
         mediaRecorderRef.current.onerror = (event) => {
           reject((event as any).error || new Error('MediaRecorder error'));
         };
-        
-        mediaRecorderRef.current.stop();
 
-        if (animationFrameId.current) {
-          cancelAnimationFrame(animationFrameId.current);
-          animationFrameId.current = null;
-        }
+        mediaRecorderRef.current.stop();
       });
     },
   }));
-  
+
   return (
-    <ImageComparator
-      ref={imageComparatorRef}
-      beforeImage={beforeImage}
-      afterImage={afterImage}
-    />
+    <Card
+      className={cn(
+        'transition-all duration-300',
+        isRecording &&
+          'ring-2 ring-red-500 ring-offset-4 ring-offset-background'
+      )}
+    >
+      <CardContent className="p-4 md:p-6 relative">
+        <ImageComparator
+          ref={imageComparatorRef}
+          beforeImage={beforeImage}
+          afterImage={afterImage}
+        />
+      </CardContent>
+    </Card>
   );
 });
 
