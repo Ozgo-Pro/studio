@@ -158,16 +158,12 @@ export const ImageComparator = forwardRef<
         </div>
       </div>
       
-      {/* Horizontal center line */}
+      {/* Vertical center marks */}
       <div
-        className="absolute left-0 top-1/2 w-full h-px -translate-y-1/2 pointer-events-none"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, white 50%, transparent 50%)',
-          backgroundSize: '8px 1px',
-          backgroundRepeat: 'repeat-x',
-          opacity: 0.5,
-        }}
+        className="absolute top-0 left-1/2 w-px h-2 -translate-x-1/2 bg-white/50 pointer-events-none"
+      />
+      <div
+        className="absolute bottom-0 left-1/2 w-px h-2 -translate-x-1/2 bg-white/50 pointer-events-none"
       />
     </div>
   );
