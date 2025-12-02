@@ -188,7 +188,7 @@ export default function Home() {
       </main>
 
       <footer className="w-full py-6 text-center text-muted-foreground text-sm">
-        <p>Powered by Firebase and Next.js</p>
+        <p>Powered by Ozgo Productions</p>
       </footer>
     </div>
   );
