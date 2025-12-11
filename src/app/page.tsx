@@ -191,7 +191,7 @@ export default function Home() {
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
           <a
             href="https://ozgo.co.uk/apps/"
-            className="text-primary underline-offset-4 hover:underline"
+            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -199,7 +199,7 @@ export default function Home() {
           </a>
           <a
             href="https://www.paypal.com/ncp/payment/QWAJXHVJKRHJ6"
-            className="text-primary underline-offset-4 hover:underline"
+            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -207,13 +207,13 @@ export default function Home() {
           </a>
           <a
             href="mailto:augustin.galatanu@gmail.com?subject=Issue%20with%20Spot%20the%20Difference%20App"
-            className="text-primary underline-offset-4 hover:underline"
+            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
           >
             Report an issue
           </a>
           <a
             href="https://ozgo.co.uk/"
-            className="text-primary underline-offset-4 hover:underline"
+            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
             target="_blank"
             rel="noopener noreferrer"
           >
