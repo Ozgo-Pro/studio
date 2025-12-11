@@ -75,14 +75,7 @@ export default function Home() {
   const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
 
   return (
-    <div className="flex flex-col min-h-dvh text-foreground relative">
-      <Image
-        src="https://picsum.photos/seed/10/1920/1080"
-        alt="Abstract background"
-        fill
-        className="object-cover -z-10 opacity-10 blur-sm"
-        data-ai-hint="abstract background"
-      />
+    <div className="flex flex-col min-h-dvh text-foreground">
       <header className="container mx-auto px-4 py-8 md:py-12 text-center">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-headline">
           Spot the Difference
