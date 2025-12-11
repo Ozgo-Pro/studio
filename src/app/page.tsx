@@ -204,14 +204,17 @@ export default function Home() {
           >
             Report an issue
           </a>
-          <a
-            href="https://ozgo.co.uk/"
-            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Powered by Ozgo Productions
-          </a>
+          <span>
+            Powered by{' '}
+            <a
+              href="https://ozgo.co.uk/"
+              className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Ozgo Productions
+            </a>
+          </span>
         </div>
       </footer>
     </div>
