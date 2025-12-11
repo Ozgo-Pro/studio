@@ -188,7 +188,38 @@ export default function Home() {
       </main>
 
       <footer className="w-full py-6 text-center text-muted-foreground text-sm">
-        <p>Powered by Ozgo Productions</p>
+        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+          <a
+            href="https://ozgo.co.uk/apps/"
+            className="hover:text-foreground transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            More Apps
+          </a>
+          <a
+            href="https://www.paypal.com/ncp/payment/QWAJXHVJKRHJ6"
+            className="hover:text-foreground transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Donate
+          </a>
+          <a
+            href="mailto:augustin.galatanu@gmail.com?subject=Issue%20with%20Spot%20the%20Difference%20App"
+            className="hover:text-foreground transition-colors"
+          >
+            Report an issue
+          </a>
+          <a
+            href="https://ozgo.co.uk/"
+            className="hover:text-foreground transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Powered by Ozgo Productions
+          </a>
+        </div>
       </footer>
     </div>
   );
