@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Download, Video, Square } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
+import { useAuth, useUser } from '@/firebase';
+import { Download, Video, Square, LogOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,8 +15,6 @@ import {
   type VideoRecorderHandle,
 } from '@/components/video-recorder';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import Image from 'next/image';
 
 export default function Home() {
   const [image1, setImage1] = useState<string | null>(null);
@@ -25,11 +26,27 @@ export default function Home() {
   const recorderRef = useRef<VideoRecorderHandle>(null);
   const { toast } = useToast();
 
+  const { user, loading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth');
+    }
+  }, [user, loading, router]);
+
+
   useEffect(() => {
     if (image1 && image2) {
       setShowComparison(true);
     }
   }, [image1, image2]);
+  
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/auth');
+  };
 
   const handleReset = () => {
     setImage1(null);
@@ -74,15 +91,30 @@ export default function Home() {
 
   const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
 
+  if (loading || !user) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <div>Loading...</div>
+        </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-dvh text-foreground">
-      <header className="container mx-auto px-4 py-8 md:py-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-headline">
-          Spot the Difference
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-          Upload two images and use the slider to compare them side-by-side.
-        </p>
+      <header className="container mx-auto px-4 py-8 md:py-12">
+        <div className="flex justify-between items-center">
+            <div className="text-center flex-grow">
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-headline">
+                Spot the Difference
+                </h1>
+                <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+                Upload two images and use the slider to compare them side-by-side.
+                </p>
+            </div>
+            <Button onClick={handleLogout} variant="outline">
+                <LogOut className="mr-2 h-4 w-4" /> Logout
+            </Button>
+        </div>
       </header>
 
       <main className="flex-1 w-full container mx-auto px-4">
@@ -180,7 +212,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="w-full py-6 text-center text-muted-foreground text-sm">
+      <footer className="w-full py-6 text-center text-sm">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
           <a
             href="https://ozgo.co.uk/apps/"
