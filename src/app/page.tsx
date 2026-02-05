@@ -1,254 +1,209 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
-import { Download, Video, Square, LogOut } from 'lucide-react';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ImageUploader } from '@/components/image-uploader';
-import { ImageComparator } from '@/components/image-comparator';
 import {
-  VideoRecorder,
-  type VideoRecorderHandle,
-} from '@/components/video-recorder';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, Search } from 'lucide-react';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default function Home() {
-  const [image1, setImage1] = useState<string | null>(null);
-  const [image2, setImage2] = useState<string | null>(null);
-  const [showComparison, setShowComparison] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const [videoFileExtension, setVideoFileExtension] = useState('webm');
-  const recorderRef = useRef<VideoRecorderHandle>(null);
-  const { toast } = useToast();
-
-  const { user, loading } = useUser();
+export default function LandingPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const auth = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+  const { user, loading: userLoading } = useUser();
+  const heroImage = PlaceHolderImages.find(p => p.id === 'landing-hero');
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth');
+    if (!userLoading && user) {
+      router.push('/spot-the-difference');
     }
-  }, [user, loading, router]);
+  }, [user, userLoading, router]);
 
-
-  useEffect(() => {
-    if (image1 && image2) {
-      setShowComparison(true);
-    }
-  }, [image1, image2]);
-  
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/auth');
-  };
-
-  const handleReset = () => {
-    setImage1(null);
-    setImage2(null);
-    setShowComparison(false);
-    setVideoBlob(null);
-    setIsRecording(false);
-  };
-
-  const handleStartRecording = () => {
-    if (!recorderRef.current) return;
-    setVideoBlob(null);
-    setIsRecording(true);
-    const extension = recorderRef.current.startRecording();
-    setVideoFileExtension(extension);
-    toast({
-      title: 'Recording Started',
-      description: 'Move the slider to create your video.',
-    });
-  };
-
-  const handleStopRecording = async () => {
-    if (!recorderRef.current) return;
+  const handleSignUp = async () => {
+    setLoading(true);
     try {
-      const blob = await recorderRef.current.stopRecording();
-      setVideoBlob(blob);
-      toast({
-        title: 'Recording Finished',
-        description: 'Your video is ready for download.',
-      });
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Recording Failed',
-        description: 'Something went wrong. Please try recording again.',
-      });
+      await createUserWithEmailAndPassword(auth, email, password);
+      router.push('/spot-the-difference');
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        toast({
+          variant: 'destructive',
+          title: 'Sign Up Failed',
+          description: 'User already exists. Please sign in',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign Up Failed',
+          description: error.message,
+        });
+      }
     } finally {
-      setIsRecording(false);
+      setLoading(false);
     }
   };
 
-  const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
-
-  if (loading || !user) {
+  const handleSignIn = async () => {
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/spot-the-difference');
+    } catch (error: any) {
+      if (
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/user-not-found' ||
+        error.code === 'invalid-credential'
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Sign In Failed',
+          description: 'Email or password is incorrect',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign In Failed',
+          description: error.message,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  if (userLoading || user) {
     return (
-        <div className="flex items-center justify-center min-h-screen">
-            <div>Loading...</div>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        Loading...
+      </div>
     );
   }
 
+
   return (
-    <div className="flex flex-col min-h-dvh text-foreground">
-      <header className="container mx-auto px-4 py-8 md:py-12">
-        <div className="flex justify-between items-center">
-            <div className="text-center flex-grow">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-headline">
-                Spot the Difference
-                </h1>
-                <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                Upload two images and use the slider to compare them side-by-side.
-                </p>
-            </div>
-            <Button onClick={handleLogout} variant="outline">
-                <LogOut className="mr-2 h-4 w-4" /> Logout
-            </Button>
-        </div>
-      </header>
-
-      <main className="flex-1 w-full container mx-auto px-4">
-        {!showComparison ? (
-          <Card className="max-w-4xl mx-auto bg-background/80 backdrop-blur-sm">
-            <CardContent className="p-6 md:p-8">
-              <div className="grid md:grid-cols-2 gap-6">
-                <ImageUploader
-                  image={image1}
-                  onImageUpload={setImage1}
-                  onReset={() => setImage1(null)}
-                  title="Before Image"
-                  id="image1"
-                />
-                <ImageUploader
-                  image={image2}
-                  onImageUpload={setImage2}
-                  onReset={() => setImage2(null)}
-                  title="After Image"
-                  id="image2"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <section className="mt-8 max-w-4xl mx-auto">
-            {image1 && image2 ? (
-              <div className="space-y-8 animate-in fade-in duration-500">
-                <VideoRecorder
-                  ref={recorderRef}
-                  beforeImage={image1}
-                  afterImage={image2}
-                  isRecording={isRecording}
-                >
-                  <ImageComparator beforeImage={image1} afterImage={image2} />
-                </VideoRecorder>
-                <div className="text-center flex flex-wrap justify-center gap-4">
-                  <Button
-                    size="lg"
-                    onClick={handleReset}
-                    variant="outline"
-                    disabled={isRecording}
-                  >
-                    Start Over
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
+      <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6">
+          <Tabs defaultValue="signin" className="w-[350px]">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            <TabsContent value="signin">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sign In</CardTitle>
+                  <CardDescription>
+                    Enter your credentials to access your account.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email-signin">Email</Label>
+                    <Input
+                      id="email-signin"
+                      type="email"
+                      placeholder="m@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password-signin">Password</Label>
+                    <Input
+                      id="password-signin"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button onClick={handleSignIn} className="w-full" disabled={loading}>
+                    {loading ? 'Signing In...' : 'Sign In'}
                   </Button>
-                  {!isRecording ? (
-                    <Button
-                      size="lg"
-                      onClick={handleStartRecording}
-                      disabled={isRecording}
-                    >
-                      <Video className="mr-2" />
-                      Start Recording
-                    </Button>
-                  ) : (
-                    <Button
-                      size="lg"
-                      variant="destructive"
-                      onClick={handleStopRecording}
-                    >
-                      <Square className="mr-2" />
-                      Stop Recording
-                      <span className="relative flex h-3 w-3 ml-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-current"></span>
-                      </span>
-                    </Button>
-                  )}
-                  {videoUrl && (
-                    <Button size="lg" asChild>
-                      <a
-                        href={videoUrl}
-                        download={`comparison.${videoFileExtension}`}
-                      >
-                        <Download className="mr-2" />
-                        Download Video
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center">
-                <p>Something went wrong. Please start over.</p>
-                <Button
-                  onClick={handleReset}
-                  variant="outline"
-                  className="mt-4"
-                >
-                  Start Over
-                </Button>
-              </div>
-            )}
-          </section>
-        )}
-      </main>
-
-      <footer className="w-full py-6 text-center text-sm">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-          <a
-            href="https://ozgo.co.uk/apps/"
-            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            More Apps
-          </a>
-          <a
-            href="https://www.paypal.com/ncp/payment/QWAJXHVJKRHJ6"
-            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Donate
-          </a>
-          <a
-            href="mailto:augustin.galatanu@gmail.com?subject=Issue%20with%20Spot%20the%20Difference%20App"
-            className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
-          >
-            Report an issue
-          </a>
-          <span>
-            Powered by{' '}
-            <a
-              href="https://ozgo.co.uk/"
-              className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Ozgo Productions
-            </a>
-          </span>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="signup">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sign Up</CardTitle>
+                  <CardDescription>
+                    Create an account to get started.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email-signup">Email</Label>
+                    <Input
+                      id="email-signup"
+                      type="email"
+                      placeholder="m@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password-signup">Password</Label>
+                    <Input
+                      id="password-signup"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button onClick={handleSignUp} className="w-full" disabled={loading}>
+                    {loading ? 'Signing Up...' : 'Sign Up'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-      </footer>
+      </div>
+      <div className="hidden bg-muted lg:flex lg:items-center lg:justify-center lg:flex-col p-12">
+        <div className="flex items-center gap-4 text-primary mb-8">
+            <Eye className="h-12 w-12" />
+            <h1 className="text-5xl font-bold">Spot the Difference</h1>
+            <Search className="h-12 w-12" />
+        </div>
+        {heroImage && <Image
+          src={heroImage.imageUrl}
+          alt={heroImage.description}
+          data-ai-hint={heroImage.imageHint}
+          width="1200"
+          height="800"
+          className="rounded-lg object-cover"
+        />}
+        <p className="text-center text-lg mt-8 max-w-2xl text-muted-foreground">
+          The ultimate tool to compare two images and instantly see what has changed.
+          Perfect for designers, developers, and anyone who needs a keen eye for detail.
+        </p>
+      </div>
     </div>
   );
 }
