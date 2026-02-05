@@ -1,13 +1,30 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { useAuth, useUser } from '@/firebase';
-import { Download, Video, Square, LogOut } from 'lucide-react';
+import { useAuth, useUser, useFirestore, useStorage, useCollection } from '@/firebase';
+import { Download, Video, Square, LogOut, Save } from 'lucide-react';
+import { saveComparison } from '@/lib/comparisons';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { ImageUploader } from '@/components/image-uploader';
 import { ImageComparator } from '@/components/image-comparator';
 import {
@@ -28,7 +45,17 @@ export default function SpotTheDifferencePage() {
 
   const { user, loading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
+
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [comparisonName, setComparisonName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { data: comparisons, loading: comparisonsLoading } = useCollection(
+    user ? `users/${user.uid}/comparisons` : null
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,13 +65,12 @@ export default function SpotTheDifferencePage() {
     }
   }, [user, loading, router]);
 
-
   useEffect(() => {
     if (image1 && image2) {
       setShowComparison(true);
     }
   }, [image1, image2]);
-  
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/');
@@ -91,13 +117,45 @@ export default function SpotTheDifferencePage() {
     }
   };
 
+  const handleSave = async () => {
+    if (!user || !image1 || !image2 || !comparisonName) return;
+    setIsSaving(true);
+    try {
+      await saveComparison(
+        firestore,
+        storage,
+        user.uid,
+        comparisonName,
+        image1,
+        image2
+      );
+      toast({ title: 'Success!', description: 'Comparison saved.' });
+      setShowSaveDialog(false);
+      setComparisonName('');
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not save comparison.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLoadComparison = (comparison: any) => {
+    setImage1(comparison.image1Url);
+    setImage2(comparison.image2Url);
+    setShowComparison(true);
+  };
+
   const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
 
   if (loading || !user || !user.emailVerified) {
     return (
-        <div className="flex items-center justify-center min-h-screen">
-            <div>Loading...</div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading...</div>
+      </div>
     );
   }
 
@@ -105,17 +163,17 @@ export default function SpotTheDifferencePage() {
     <div className="flex flex-col min-h-dvh text-foreground">
       <header className="container mx-auto px-4 py-8 md:py-12">
         <div className="flex justify-between items-center">
-            <div className="text-center flex-grow">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-headline">
-                Spot the Difference
-                </h1>
-                <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                Upload two images and use the slider to compare them side-by-side.
-                </p>
-            </div>
-            <Button onClick={handleLogout} variant="outline">
-                <LogOut className="mr-2 h-4 w-4" /> Logout
-            </Button>
+          <div className="text-center flex-grow">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight font-headline">
+              Spot the Difference
+            </h1>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              Upload two images and use the slider to compare them side-by-side.
+            </p>
+          </div>
+          <Button onClick={handleLogout} variant="outline">
+            <LogOut className="mr-2 h-4 w-4" /> Logout
+          </Button>
         </div>
       </header>
 
@@ -161,6 +219,10 @@ export default function SpotTheDifferencePage() {
                     disabled={isRecording}
                   >
                     Start Over
+                  </Button>
+                  <Button size="lg" onClick={() => setShowSaveDialog(true)}>
+                    <Save className="mr-2" />
+                    Save Comparison
                   </Button>
                   {!isRecording ? (
                     <Button
@@ -212,9 +274,58 @@ export default function SpotTheDifferencePage() {
             )}
           </section>
         )}
+
+        <section className="mt-12">
+          <h2 className="text-2xl font-bold text-center mb-6">
+            Your Saved Comparisons
+          </h2>
+          {comparisonsLoading && (
+            <p className="text-center">Loading comparisons...</p>
+          )}
+          {!comparisonsLoading &&
+            comparisons &&
+            comparisons.length === 0 && (
+              <p className="text-center text-muted-foreground">
+                You have no saved comparisons yet.
+              </p>
+            )}
+          {!comparisonsLoading && comparisons && comparisons.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(comparisons as any[]).map((comp) => (
+                <Card
+                  key={comp.id}
+                  onClick={() => handleLoadComparison(comp)}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                >
+                  <CardHeader>
+                    <CardTitle>{comp.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex gap-2 justify-center">
+                    <div className="relative w-24 h-24 rounded-md overflow-hidden">
+                      <Image
+                        src={comp.image1Url}
+                        alt="Before"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="relative w-24 h-24 rounded-md overflow-hidden">
+                      <Image
+                        src={comp.image2Url}
+                        alt="After"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
 
-      <footer className="w-full py-6 text-center text-sm">
+      <footer className="w-full py-6 mt-12 text-center text-sm">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
           <a
             href="https://ozgo.co.uk/apps/"
@@ -251,6 +362,35 @@ export default function SpotTheDifferencePage() {
           </span>
         </div>
       </footer>
+
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Comparison</DialogTitle>
+            <DialogDescription>
+              Give your comparison a name to save it for later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={comparisonName}
+                onChange={(e) => setComparisonName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

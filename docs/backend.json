@@ -16,10 +16,50 @@
         }
       },
       "required": ["uid", "email"]
+    },
+    "comparison": {
+      "title": "Comparison",
+      "description": "A saved image comparison.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the comparison."
+        },
+        "image1Url": {
+          "type": "string",
+          "description": "The URL for the 'before' image in Firebase Storage."
+        },
+        "image2Url": {
+          "type": "string",
+          "description": "The URL for the 'after' image in Firebase Storage."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of creation."
+        }
+      },
+      "required": [
+        "name",
+        "image1Url",
+        "image2Url",
+        "createdAt"
+      ]
     }
   },
   "auth": {
-    "providers": ["email", "google"]
+    "providers": [
+      "email",
+      "google"
+    ]
   },
-  "firestore": {}
+  "firestore": {
+    "/users/{userId}/comparisons/{comparisonId}": {
+      "schema": {
+        "$ref": "#/entities/comparison"
+      },
+      "description": "Stores image comparisons created by a specific user."
+    }
+  }
 }
