@@ -33,6 +33,8 @@ export default function SpotTheDifferencePage() {
   useEffect(() => {
     if (!loading && !user) {
       router.push('/');
+    } else if (!loading && user && !user.emailVerified) {
+      router.push(`/auth/verify?email=${user.email}`);
     }
   }, [user, loading, router]);
 
@@ -91,7 +93,7 @@ export default function SpotTheDifferencePage() {
 
   const videoUrl = videoBlob ? URL.createObjectURL(videoBlob) : null;
 
-  if (loading || !user) {
+  if (loading || !user || !user.emailVerified) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <div>Loading...</div>

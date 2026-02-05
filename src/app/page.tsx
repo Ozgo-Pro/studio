@@ -7,6 +7,8 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  sendEmailVerification,
+  signOut,
 } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
 import Image from 'next/image';
@@ -52,7 +54,7 @@ export default function LandingPage() {
   const heroImage = PlaceHolderImages.find(p => p.id === 'landing-hero');
 
   useEffect(() => {
-    if (!userLoading && user) {
+    if (!userLoading && user && user.emailVerified) {
       router.push('/spot-the-difference');
     }
   }, [user, userLoading, router]);
@@ -60,8 +62,10 @@ export default function LandingPage() {
   const handleSignUp = async () => {
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push('/spot-the-difference');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(userCredential.user);
+      await signOut(auth);
+      router.push(`/auth/verify?email=${email}`);
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         toast({
@@ -84,8 +88,12 @@ export default function LandingPage() {
   const handleSignIn = async () => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/spot-the-difference');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (userCredential.user.emailVerified) {
+        router.push('/spot-the-difference');
+      } else {
+        router.push(`/auth/verify?email=${userCredential.user.email}`);
+      }
     } catch (error: any) {
       if (
         error.code === 'auth/wrong-password' ||
@@ -113,8 +121,14 @@ export default function LandingPage() {
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      router.push('/spot-the-difference');
+      const result = await signInWithPopup(auth, provider);
+      if (result.user.emailVerified) {
+        router.push('/spot-the-difference');
+      } else {
+        await sendEmailVerification(result.user);
+        await signOut(auth);
+        router.push(`/auth/verify?email=${result.user.email}`);
+      }
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -126,7 +140,7 @@ export default function LandingPage() {
     }
   };
   
-  if (userLoading || user) {
+  if (userLoading || (user && user.emailVerified)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         Loading...
