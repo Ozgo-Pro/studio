@@ -121,7 +121,7 @@ export default function SpotTheDifferencePage() {
 
       <main className="flex-1 w-full container mx-auto px-4">
         {!showComparison ? (
-          <Card className="max-w-4xl mx-auto bg-background/80 backdrop-blur-sm">
+          <Card className="max-w-3xl mx-auto bg-background/80 backdrop-blur-sm">
             <CardContent className="p-6 md:p-8">
               <div className="grid md:grid-cols-2 gap-6">
                 <ImageUploader
@@ -142,7 +142,7 @@ export default function SpotTheDifferencePage() {
             </CardContent>
           </Card>
         ) : (
-          <section className="mt-8 max-w-4xl mx-auto">
+          <section className="mt-8 max-w-3xl mx-auto">
             {image1 && image2 ? (
               <div className="space-y-8 animate-in fade-in duration-500">
                 <VideoRecorder

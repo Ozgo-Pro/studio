@@ -267,14 +267,15 @@ export default function LandingPage() {
             <h1 className="text-5xl font-bold">Spot the Difference</h1>
             <Search className="h-12 w-12" />
         </div>
-        {heroImage && <Image
-          src={heroImage.imageUrl}
-          alt={heroImage.description}
-          data-ai-hint={heroImage.imageHint}
-          width="1200"
-          height="800"
-          className="rounded-lg object-cover"
-        />}
+        <div className="relative w-full max-w-2xl aspect-[4/3]">
+          {heroImage && <Image
+            src={heroImage.imageUrl}
+            alt={heroImage.description}
+            data-ai-hint={heroImage.imageHint}
+            fill
+            className="rounded-lg object-contain"
+          />}
+        </div>
         <p className="text-center text-lg mt-8 max-w-2xl text-muted-foreground">
           The ultimate tool to compare two images and instantly see what has changed.
           Perfect for designers, developers, and anyone who needs a keen eye for detail.
