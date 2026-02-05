@@ -64,8 +64,7 @@ export default function LandingPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerification(userCredential.user);
-      await signOut(auth);
-      router.push(`/auth/verify?email=${email}`);
+      router.push('/spot-the-difference');
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         toast({
@@ -92,6 +91,8 @@ export default function LandingPage() {
       if (userCredential.user.emailVerified) {
         router.push('/spot-the-difference');
       } else {
+        await sendEmailVerification(userCredential.user);
+        await signOut(auth);
         router.push(`/auth/verify?email=${userCredential.user.email}`);
       }
     } catch (error: any) {
@@ -121,14 +122,8 @@ export default function LandingPage() {
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      if (result.user.emailVerified) {
-        router.push('/spot-the-difference');
-      } else {
-        await sendEmailVerification(result.user);
-        await signOut(auth);
-        router.push(`/auth/verify?email=${result.user.email}`);
-      }
+      await signInWithPopup(auth, provider);
+      router.push('/spot-the-difference');
     } catch (error: any) {
       toast({
         variant: 'destructive',
